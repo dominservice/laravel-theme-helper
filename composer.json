@@ -2,7 +2,7 @@
   "name": "dominservice/laravel-theme-helper",
   "description": "Merge default config with dynamic settings, and optimize.",
   "type": "library",
-  "keywords": ["laravel", "theme", "seo", "meta", "application/ld+json", "json-ld"],
+  "keywords": ["laravel", "theme", "seo", "meta", "json-ld"],
   "homepage": "https://github.com/dominservice/laravel-theme-helper",
   "license": "MIT",
   "authors": [
