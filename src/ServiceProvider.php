@@ -1,28 +1,31 @@
 <?php
+declare(strict_types=1);
 
-use Illuminate\Support\ServiceProvider as BaseServiceProvider;
+namespace Dominservice\LaravelThemeHelper;
 
-class ServiceProvider extends BaseServiceProvider
+use Dominservice\LaravelThemeHelper\Support\Assets\AssetManager;
+use Dominservice\LaravelThemeHelper\Support\Localization\Hreflang;
+use Dominservice\LaravelThemeHelper\Support\Meta\MetaManager;
+use Dominservice\LaravelThemeHelper\Support\Navigation\Breadcrumbs;
+use Illuminate\Support\ServiceProvider as BaseProvider;
+
+final class ServiceProvider extends BaseProvider
 {
-    private int $lpMigration = 0;
-
-    /**
-     * Bootstrap the application services.
-     *
-     * @return void
-     */
-    public function boot()
+    public function register(): void
     {
-        //
+        $this->app->singleton('dominservice.theme', function () {
+            $structured  = new ThemeStructuredData();
+            $meta        = new MetaManager();
+            $assets      = new AssetManager();
+            $breadcrumbs = new Breadcrumbs();
+            $hreflang    = new Hreflang();
+
+            return new ThemeManager($structured, $meta, $assets, $breadcrumbs, $hreflang);
+        });
     }
 
-    /**
-     * Register the service provider.
-     *
-     * @return void
-     */
-    public function register()
+    public function boot(): void
     {
-        //
+        // miejsce na publish config/assets w przyszłości
     }
 }
