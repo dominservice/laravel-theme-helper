@@ -1,6 +1,6 @@
 {
   "name": "dominservice/laravel-theme-helper",
-  "description": "Merge default config with dynamic settings, and optimize.",
+  "description": "A small Laravel utility to manage everything you usually put into the <head> and the closing of <body>, plus a pragmatic Schema.org JSON‑LD generator.",
   "type": "library",
   "keywords": ["laravel", "theme", "seo", "meta", "json-ld"],
   "homepage": "https://github.com/dominservice/laravel-theme-helper",
