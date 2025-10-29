@@ -141,7 +141,7 @@ Global options for structured():
 
 ### MetaManager
 
-Configure and render meta tags (title/description/keywords/robots), canonical, prev/next, OG and Twitter, icons/manifest.
+Configure and render meta tags (title/description/keywords/robots), canonical, prev/next, OG and Twitter, icons/manifest, and optional CSRF meta.
 
 ```php
 Theme::meta()
@@ -195,6 +195,21 @@ Theme::meta()
 
 echo Theme::meta()->renderStandard();
 ```
+
+CSRF/XSRF token meta in <head>:
+```php
+// Adds: <meta name="csrf-token" content="..."> to the <head>
+Theme::meta()->withCsrf();
+
+// Optionally provide your own token value (e.g., from Sanctum or custom guard):
+Theme::meta()->withCsrf(true, $token);
+// or later
+Theme::meta()->setCsrfToken($token);
+```
+
+Notes:
+- withCsrf() tries to use Laravel's csrf_token() helper. If the session is not started or the helper is unavailable, nothing is rendered unless you set a token explicitly.
+- Many front-end libraries (Axios, Laravel Echo) read this meta to send the X-CSRF-TOKEN header automatically.
 
 Defaults:
 - title falls back to config('app.name')

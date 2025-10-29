@@ -14,6 +14,10 @@ final class MetaManager
     private ?string $next = null;
     private ?string $robots = null;
 
+    /** CSRF/XSRF meta control */
+    private bool $emitCsrf = false;
+    private ?string $csrfToken = null;
+
     /** Open Graph */
     private array $og = [
         'type'     => 'website',
@@ -109,6 +113,23 @@ final class MetaManager
         return $this;
     }
 
+    /** Enable emitting a CSRF meta tag in <head>. Optionally set a specific token. */
+    public function withCsrf(bool $on = true, ?string $token = null): self
+    {
+        $this->emitCsrf = $on;
+        if ($token !== null) {
+            $this->csrfToken = $token;
+        }
+        return $this;
+    }
+
+    /** Manually set the CSRF token value to emit in <head>. */
+    public function setCsrfToken(?string $token): self
+    {
+        $this->csrfToken = $token;
+        return $this;
+    }
+
     /* ========== render ========== */
 
     public function renderStandard(): string
@@ -153,6 +174,23 @@ final class MetaManager
 
         // Ikony / manifest
         $out = array_merge($out, $this->renderIcons());
+
+        // CSRF meta (optional)
+        if ($this->emitCsrf) {
+            $token = $this->csrfToken;
+            // Prefer explicitly set token; fallback to Laravel helper if available
+            if ($token === null && function_exists('csrf_token')) {
+                try {
+                    $token = csrf_token();
+                } catch (\Throwable $e) {
+                    // ignore if session not started
+                    $token = null;
+                }
+            }
+            if (is_string($token) && $token !== '') {
+                $out[] = '<meta name="csrf-token" content="'.e($token).'">';
+            }
+        }
 
         return implode("\n", $out);
     }
