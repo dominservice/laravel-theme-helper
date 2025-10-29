@@ -14,6 +14,10 @@ final class MetaManager
     private ?string $next = null;
     private ?string $robots = null;
 
+    /** Basic head metas */
+    private ?string $charset = 'utf-8';
+    private ?string $viewport = 'width=device-width, initial-scale=1';
+
     /** CSRF/XSRF meta control */
     private bool $emitCsrf = false;
     private ?string $csrfToken = null;
@@ -51,6 +55,20 @@ final class MetaManager
     ];
 
     /* ========== setters ========== */
+
+    /** Set or override <meta charset>. Pass null to skip rendering. */
+    public function setCharset(?string $charset): self
+    {
+        $this->charset = $charset !== null ? trim($charset) : null;
+        return $this;
+    }
+
+    /** Set or override <meta name="viewport">. Pass null to skip rendering. */
+    public function setViewport(?string $viewport): self
+    {
+        $this->viewport = $viewport !== null ? trim($viewport) : null;
+        return $this;
+    }
 
     public function setTitle(?string $title, ?string $siteName = null): self
     {
@@ -135,6 +153,14 @@ final class MetaManager
     public function renderStandard(): string
     {
         $out = [];
+
+        // Basic metas: charset and viewport at the very top
+        if ($this->charset !== null && $this->charset !== '') {
+            $out[] = '<meta charset="'.e($this->charset).'">';
+        }
+        if ($this->viewport !== null && $this->viewport !== '') {
+            $out[] = '<meta name="viewport" content="'.e($this->viewport).'">';
+        }
 
         // <title>
         $title = $this->title ?? config('app.name');

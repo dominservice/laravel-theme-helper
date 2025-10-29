@@ -147,7 +147,7 @@ Global options for structured():
 
 ### MetaManager
 
-Configure and render meta tags (title/description/keywords/robots), canonical, prev/next, OG and Twitter, icons/manifest, and optional CSRF meta.
+Configure and render meta tags (charset, viewport, title/description/keywords/robots), canonical, prev/next, OG and Twitter, icons/manifest, and optional CSRF meta.
 
 ```php
 Theme::meta()
@@ -218,6 +218,8 @@ Notes:
 - Many front-end libraries (Axios, Laravel Echo) read this meta to send the X-CSRF-TOKEN header automatically.
 
 Defaults:
+- meta charset → utf-8 (use setCharset(null) to skip)
+- meta viewport → width=device-width, initial-scale=1 (use setViewport(null) to skip)
 - title falls back to config('app.name')
 - og:url → canonical or url()->current()
 - og:locale → app()->getLocale() (e.g. en-US)
