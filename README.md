@@ -1,5 +1,11 @@
 # Dominservice Laravel Theme Helper
 
+[![Packagist](https://img.shields.io/packagist/v/dominservice/laravel-theme-helper.svg)]()
+[![Latest Version](https://img.shields.io/github/release/dominservice/laravel-theme-helper.svg?style=flat-square)](https://github.com/dominservice/laravel-theme-helper/releases)
+[![Total Downloads](https://img.shields.io/packagist/dt/dominservice/laravel-theme-helper.svg?style=flat-square)](https://packagist.org/packages/dominservice/laravel-theme-helper)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
+
+
 A small Laravel utility to manage everything you usually put into the <head> and the closing of <body>, plus a pragmatic Schema.org JSON‑LD generator.
 
 It provides a consistent API for:
@@ -422,6 +428,12 @@ No. You can add hreflang alternates manually via addAlternate(). If the package 
 
 3) Does the package impose a project structure?  
 No. It exposes services and a facade. Use only the modules you need.
+
+---
+
+## Support
+### Support this project (Ko‑fi)
+If this package saves you time, consider buying me a coffee: https://ko-fi.com/dominservice — thank you!
 
 ---
 
