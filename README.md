@@ -5,15 +5,17 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/dominservice/laravel-theme-helper.svg?style=flat-square)](https://packagist.org/packages/dominservice/laravel-theme-helper)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
+A Laravel package for:
 
-A small Laravel utility to manage everything you usually put into the <head> and the closing of <body>, plus a pragmatic Schema.org JSON‑LD generator.
+- SEO and meta management,
+- asset registration and rendering,
+- breadcrumb and hreflang support,
+- JSON-LD / Schema.org generation,
+- theme registry and active theme selection,
+- public/admin theme context handling,
+- asset resolution for `mix`, `vite`, and static builds.
 
-It provides a consistent API for:
-- Meta tags (title/description/keywords/robots, OpenGraph, Twitter Cards, canonical, prev/next)
-- Asset links and scripts (CSS/JS; preload/prefetch/dns‑prefetch; inline CSS/JS)
-- Breadcrumbs (HTML + JSON‑LD)
-- Hreflang alternates
-- Structured Data in a hybrid mode: Spatie Schema.org builder with RAW fallback and light validation
+It is designed to be the integration layer between your Laravel application and one or more frontend themes, while still providing the usual `<head>` and `</body>` helpers.
 
 ---
 
@@ -21,20 +23,23 @@ It provides a consistent API for:
 
 - [Requirements](#requirements)
 - [Installation](#installation)
-- [Auto‑discovery and aliases](#auto-discovery-and-aliases)
 - [Quick start](#quick-start)
-- [API and usage](#api-and-usage)
-  - [Theme manager (Theme facade)](#theme-manager-theme-facade)
+- [Theme system](#theme-system)
+  - [Contexts](#contexts)
+  - [Theme config](#theme-config)
+  - [Drivers](#drivers)
+  - [Theme switching](#theme-switching)
+- [API](#api)
+  - [Theme manager](#theme-manager)
   - [MetaManager](#metamanager)
   - [AssetManager](#assetmanager)
   - [Breadcrumbs](#breadcrumbs)
   - [Hreflang](#hreflang)
-  - [Structured Data (ThemeStructuredData)](#structured-data-themestructureddata)
-  - [Schema Types constants](#schema-types-constants)
-- [Validation, policies and errors](#validation-policies-and-errors)
+  - [Structured data](#structured-data)
 - [Blade integration](#blade-integration)
+- [Helpers](#helpers)
+- [Deployment notes](#deployment-notes)
 - [Testing](#testing)
-- [FAQ](#faq)
 - [License](#license)
 
 ---
@@ -42,42 +47,33 @@ It provides a consistent API for:
 ## Requirements
 
 - PHP 8.1+
-- Laravel 10.x / 11.x / 12.x
-- spatie/schema-org (used for rich JSON‑LD building; the package depends on it)
-- Optional: mcamara/laravel-localization (for automatic hreflang generation; you can always add alternates manually)
+- Laravel 10.x / 11.x / 12.x / 13.x
+- `spatie/schema-org`
+- Optional: `mcamara/laravel-localization`
 
 ---
 
 ## Installation
 
-Install via Composer:
 ```bash
 composer require dominservice/laravel-theme-helper
 ```
 
-If you want automatic hreflang detection via LaravelLocalization:
+Optional hreflang integration:
+
 ```bash
 composer require mcamara/laravel-localization
 ```
 
----
+Publish config if you want to define themes globally:
 
-## Auto‑discovery and aliases
-
-Laravel will automatically register the Service Provider and facade. If you prefer manual setup, add to your config/app.php:
-
-```php
-'providers' => [
-    // ...
-    Dominservice\LaravelThemeHelper\ServiceProvider::class,
-],
-'aliases' => [
-    // ...
-    'Theme' => Dominservice\LaravelThemeHelper\Facades\Theme::class,
-],
+```bash
+php artisan vendor:publish --tag=config
 ```
 
-Namespace: Dominservice\LaravelThemeHelper (PSR‑4 → src/)
+This publishes:
+
+- `config/theme-helper.php`
 
 ---
 
@@ -86,295 +82,319 @@ Namespace: Dominservice\LaravelThemeHelper (PSR‑4 → src/)
 ```php
 use Dominservice\LaravelThemeHelper\Facades\Theme;
 
-// META
 Theme::meta()
-    ->setTitle('EcoChatka 70', 'Dominwise')
-    ->setDescription('Modular strawbale house, 70 m²')
-    ->setCanonical(url()->current())
-    ->setOg(['image' => asset('og.jpg')]);
+    ->setTitle('DSO-IT', config('app.name'))
+    ->setDescription('Software house and custom web systems')
+    ->setCanonical(url()->current());
 
-// ASSETS
 Theme::assets()
-    ->preload(asset('css/app.css'), 'style')
-    ->addStylesheet(asset('css/app.css'))
-    ->addScript(asset('js/app.js'), defer: true);
+    ->useTheme('public');
 
-// HREFLANG
-Theme::hreflang()->autoFromLaravelLocalization();
-
-// HEAD + BODY
 echo Theme::renderHead();
-// ... page content ...
 echo Theme::renderBodyEnd();
 ```
 
-Breadcrumbs (HTML + JSON‑LD):
-```php
-$items = [
-  ['name' => 'Home', 'url' => url('/')],
-  ['name' => 'Category', 'url' => url('/category')],
-  ['name' => 'Product'],
-];
+Switch public theme dynamically:
 
-echo Theme::breadcrumbs()->render($items);
-echo Theme::breadcrumbJsonLd($items);
+```php
+Theme::useTheme('public-metronic', 'public');
+Theme::assets()->useTheme('public');
 ```
 
 ---
 
-## API and usage
+## Theme system
 
-### Theme manager (Theme facade)
+### Contexts
 
-The container service that wires everything together:
+The package supports theme contexts.
 
-- Theme::meta(): MetaManager
-- Theme::assets(): AssetManager
-- Theme::breadcrumbs(): Breadcrumbs
-- Theme::hreflang(): Hreflang
-- Theme::structured(array $data, array $options = []): string
-- Theme::structuredErrors(): array
-- Theme::breadcrumbJsonLd(array $items, array $options = []): string
-- Theme::renderHead(): string
-- Theme::renderBodyEnd(): string
+Typical usage:
 
-Global options for structured():
-- use_spatie: bool = true — use Spatie builder when available (the package requires it)
-- on_invalid: 'skip'|'error' = 'skip' — validation policy
-- attach_inLanguage: bool = true — auto fill inLanguage using app()->getLocale()
+- `admin`
+- `public`
+
+Rules are application-defined, but a common setup is:
+
+- admin always uses a fixed admin theme
+- public can use one of many declared themes
+
+### Theme config
+
+Published config structure:
+
+```php
+return [
+    'contexts' => [
+        'admin' => [
+            'default_theme' => 'admin',
+        ],
+        'public' => [
+            'default_theme' => 'public',
+        ],
+    ],
+
+    'themes' => [
+        'admin' => [
+            'label' => 'Admin',
+            'context' => 'admin',
+            'driver' => 'static',
+            'layout' => null,
+            'build_config_path' => null,
+            'manifest_path' => null,
+            'hot_file_path' => null,
+            'dev_server_url' => null,
+            'public_path' => null,
+            'asset_url' => null,
+            'deploy_target' => null,
+            'entries' => [
+                'css' => [],
+                'js' => [],
+            ],
+        ],
+        'public-metronic' => [
+            'label' => 'Public Metronic',
+            'context' => 'public',
+            'driver' => 'vite',
+            'layout' => 'themes.public-metronic.layouts.app',
+            'build_config_path' => base_path('themes/public-metronic/vite.config.js'),
+            'manifest_path' => public_path('themes/public-metronic/.vite/manifest.json'),
+            'hot_file_path' => base_path('themes/public-metronic/public.hot'),
+            'dev_server_url' => env('PUBLIC_METRONIC_VITE_DEV_SERVER'),
+            'asset_url' => env('APP_URL') . '/themes/public-metronic',
+            'deploy_target' => public_path('themes/public-metronic'),
+            'entries' => [
+                'css' => [],
+                'js' => [
+                    'resources/app.js',
+                ],
+            ],
+        ],
+    ],
+];
+```
+
+### Drivers
+
+Supported asset drivers:
+
+- `static`
+- `mix`
+- `vite`
+
+#### `static`
+
+Use for pre-resolved assets or manually declared URLs:
+
+```php
+'driver' => 'static',
+'entries' => [
+    'css' => ['assets/css/app.css'],
+    'js' => ['assets/js/app.js'],
+],
+```
+
+#### `mix`
+
+Use when the theme has its own `mix-manifest.json`:
+
+```php
+'driver' => 'mix',
+'manifest_path' => public_path('themes/public-alt/mix-manifest.json'),
+'entries' => [
+    'css' => ['themes/public-alt/app.css'],
+    'js' => ['themes/public-alt/app.js'],
+],
+```
+
+#### `vite`
+
+Use when the theme has its own Vite manifest and optionally a hot file:
+
+```php
+'driver' => 'vite',
+'manifest_path' => public_path('themes/public-metronic/.vite/manifest.json'),
+'hot_file_path' => base_path('themes/public-metronic/public.hot'),
+'dev_server_url' => env('PUBLIC_METRONIC_VITE_DEV_SERVER'),
+'entries' => [
+    'js' => ['resources/app.js'],
+],
+```
+
+If `hot_file_path` exists and contains a dev-server URL, the package will render dev assets with `@vite/client`.
+
+### Theme switching
+
+Switching themes:
+
+```php
+Theme::useTheme('public-metronic', 'public');
+Theme::useTheme('admin', 'admin');
+```
+
+Reading current theme:
+
+```php
+$theme = Theme::currentTheme('public');
+$layout = $theme->layout();
+$driver = $theme->driver();
+```
+
+Registering themes at runtime:
+
+```php
+Theme::registry()->register('public-alt', [
+    'label' => 'Public Alt',
+    'context' => 'public',
+    'driver' => 'mix',
+    'manifest_path' => public_path('themes/public-alt/mix-manifest.json'),
+    'entries' => [
+        'css' => ['themes/public-alt/app.css'],
+        'js' => ['themes/public-alt/app.js'],
+    ],
+]);
+```
 
 ---
+
+## API
+
+### Theme manager
+
+Main facade methods:
+
+- `Theme::meta()`
+- `Theme::assets()`
+- `Theme::breadcrumbs()`
+- `Theme::hreflang()`
+- `Theme::structured(array $data, array $options = [])`
+- `Theme::structuredErrors()`
+- `Theme::breadcrumbJsonLd(array $items, array $options = [])`
+- `Theme::registry()`
+- `Theme::contexts()`
+- `Theme::currentTheme(string $context = 'public')`
+- `Theme::useTheme(string $themeKey, ?string $context = null)`
+- `Theme::renderHead()`
+- `Theme::renderBodyEnd()`
 
 ### MetaManager
 
-Configure and render meta tags (charset, viewport, title/description/keywords/robots), canonical, prev/next, OG and Twitter, icons/manifest, and optional CSRF meta.
+Examples:
 
 ```php
 Theme::meta()
-  ->setTitle('Title', 'Site Name')
-  ->setDescription('Page description')
-  ->setKeywords('phrase1, phrase2')
-  ->setRobots('index,follow')
-  ->setCanonical(url()->current())
-  ->setPrev($prevUrl)
-  ->setNext($nextUrl)
-  ->setOg([
-      'type' => 'article',
-      'image' => asset('og.jpg'),
-  ])
-  ->setTwitter([
-      'card'  => 'summary_large_image',
-      'site'  => '@your_profile',
-      'image' => asset('tw.jpg'),
-  ])
-  ->setIcons([
-      // Backward‑compat single favicon
-      'favicon'     => '/favicon.ico',
-
-      // Apple touch icon(s)
-      // either array of strings or array of arrays with sizes
-      'apple_touch' => [
-          '/apple-touch-icon.png',
-          // ['href' => '/apple-touch-icon-57x57.png', 'sizes' => '57x57'],
-      ],
-
-      // Standard icons with sizes/type (optional)
-      'icon'        => [
-          // '/favicon-32x32.png',
-          // ['href' => '/favicon-32x32.png', 'sizes' => '32x32', 'type' => 'image/png'],
-      ],
-
-      // PWA manifest
-      'manifest'    => '/site.webmanifest',
-
-      // Safari mask icon (optional)
-      'mask_icon'   => '/safari-pinned-tab.svg',
-      'mask_color'  => '#000000',
-
-      // Microsoft tiles (optional)
-      'ms_tile_color' => '#ffffff',
-      'ms_tile_image' => '/mstile-150x150.png',
-    
-      // Theme color (optional)
-      'theme_color' => '#ffffff',
-  ]);
-
-echo Theme::meta()->renderStandard();
+    ->setTitle('Title', 'Site Name')
+    ->setDescription('Page description')
+    ->setKeywords('software house, laravel, cms')
+    ->setRobots('index,follow')
+    ->setCanonical(url()->current())
+    ->setOg([
+        'type' => 'website',
+        'image' => asset('og.jpg'),
+    ])
+    ->setTwitter([
+        'card' => 'summary_large_image',
+    ]);
 ```
 
-CSRF/XSRF token meta in <head>:
+CSRF meta:
+
 ```php
-// Adds: <meta name="csrf-token" content="..."> to the <head>
 Theme::meta()->withCsrf();
-
-// Optionally provide your own token value (e.g., from Sanctum or custom guard):
 Theme::meta()->withCsrf(true, $token);
-// or later
-Theme::meta()->setCsrfToken($token);
 ```
-
-Notes:
-- withCsrf() tries to use Laravel's csrf_token() helper. If the session is not started or the helper is unavailable, nothing is rendered unless you set a token explicitly.
-- Many front-end libraries (Axios, Laravel Echo) read this meta to send the X-CSRF-TOKEN header automatically.
-
-Defaults:
-- meta charset → utf-8 (use setCharset(null) to skip)
-- meta viewport → width=device-width, initial-scale=1 (use setViewport(null) to skip)
-- title falls back to config('app.name')
-- og:url → canonical or url()->current()
-- og:locale → app()->getLocale() (e.g. en-US)
-- twitter:card → summary_large_image
-
----
 
 ### AssetManager
 
-Register and render links for <head> and scripts for the end of <body>:
+Manual assets:
 
 ```php
 Theme::assets()
-  ->dnsPrefetch('//fonts.googleapis.com')
-  ->preload(asset('css/app.css'), 'style')
-  ->addStylesheet(asset('css/app.css'), media: 'all')
-  ->inlineCss('.hero{display:grid;place-items:center;}')
-
-  ->addScript(asset('js/app.js'), defer: true, async: false, attrs: ['data-app'=>'1'])
-  ->inlineJs('window.__boot = true;');
-
-echo Theme::assets()->renderHeadLinks();  // into <head>
-echo Theme::assets()->renderBodyScripts(); // before </body>
+    ->dnsPrefetch('//fonts.googleapis.com')
+    ->preload(asset('css/app.css'), 'style')
+    ->addStylesheet(asset('css/app.css'))
+    ->addScript(asset('js/app.js'), defer: true)
+    ->inlineCss('.hero{display:grid;}')
+    ->inlineJs('window.__boot = true;');
 ```
 
-Supported rel values: stylesheet, preload (with as=...), prefetch, dns-prefetch
-Scripts: async, defer, arbitrary attributes via attrs
-Inline: inlineCss(), inlineJs()
+Theme-driven assets:
 
----
+```php
+Theme::assets()->useTheme('public');
+```
+
+This will resolve CSS/JS using the currently active theme for that context.
+
+Multiple contexts are supported:
+
+```php
+Theme::assets()
+    ->useTheme('admin')
+    ->useTheme('public');
+```
 
 ### Breadcrumbs
 
-Normalize your items for JSON‑LD and render a simple HTML list.
-
 ```php
 $items = [
-  ['name'=>'Home', 'url'=>url('/')],
-  ['name'=>'Category', 'url'=>url('/category')],
-  ['name'=>'Product'],
+    ['name' => 'Home', 'url' => url('/')],
+    ['name' => 'Services', 'url' => url('/services')],
+    ['name' => 'Laravel CMS'],
 ];
 
-// HTML
 echo Theme::breadcrumbs()->render($items);
-
-// JSON-LD
 echo Theme::breadcrumbJsonLd($items);
 ```
 
----
-
 ### Hreflang
 
-Automatic generation using LaravelLocalization or manual alternates.
-
 ```php
-// Automatic (if mcamara/laravel-localization is installed)
 Theme::hreflang()->autoFromLaravelLocalization();
 
-// Manual
 Theme::hreflang()
-  ->addAlternate('https://example.com/en', 'en-US')
-  ->addAlternate('https://example.com/de', 'de-DE');
-
-echo Theme::hreflang()->renderAlternates();
+    ->addAlternate('https://example.com/en', 'en-US')
+    ->addAlternate('https://example.com/pl', 'pl-PL');
 ```
 
----
+### Structured data
 
-### Structured Data (ThemeStructuredData)
+RAW graph mode:
 
-Hybrid JSON‑LD engine: try Spatie builder first, then fallback to permissive RAW mode.
-
-#### RAW @graph mode (full freedom, including future types/properties)
 ```php
 echo Theme::structured([
-  'schemas' => [
-    ['@type'=>'Organization','name'=>'Dominwise','url'=>config('app.url')],
-    ['@type'=>'WebSite','url'=>config('app.url'),'name'=>config('app.name')],
-  ],
-], ['on_invalid' => 'skip']);
+    'schemas' => [
+        ['@type' => 'Organization', 'name' => config('app.name'), 'url' => config('app.url')],
+        ['@type' => 'WebSite', 'name' => config('app.name'), 'url' => config('app.url')],
+    ],
+]);
 ```
 
-#### Shortcuts for popular types
+Shortcut mode:
+
 ```php
 use Dominservice\LaravelThemeHelper\Schema\Types;
 
 echo Theme::structured([
-  'type'  => Types::PRODUCT,
-  'name'  => 'EcoChatka 70',
-  'image' => [asset('img.jpg')],
-  'offers'=> [['price'=>'199000','priceCurrency'=>'PLN','availability'=>'https://schema.org/InStock','url'=>url()->current()]],
-  'aggregateRating' => ['ratingValue'=>4.8,'reviewCount'=>37],
-], ['use_spatie'=>true, 'on_invalid'=>'error']);
+    'type' => Types::SERVICE,
+    'name' => 'Laravel CMS development',
+]);
 ```
 
-Supported type shortcuts (RAW + Spatie, depending on availability):
-Organization, LocalBusiness, Person, Product, Article, NewsArticle, BlogPosting, BreadcrumbList, Event, Recipe, VideoObject, FAQPage, HowTo, WebSite, WebPage, SoftwareApplication, JobPosting, Course, Review, ItemList, ImageObject, AudioObject, Book, Dataset, Service
+Validation errors:
 
-Minimal validation (a practical subset of common Rich Results requirements):
-- Product → name, offers[*].{price,priceCurrency}
-- Article/NewsArticle/BlogPosting → headline
-- BreadcrumbList → itemListElement
-- Event → name, startDate, location
-- FAQPage → mainEntity (Question/Answer)
-- HowTo → name, step
-- LocalBusiness → name, address
-- VideoObject → name, thumbnailUrl, uploadDate
-- Recipe → name, recipeIngredient, recipeInstructions
-- SoftwareApplication → name, operatingSystem
-- JobPosting → title, hiringOrganization, jobLocation
-- ItemList → itemListElement
-- ImageObject → contentUrl
-- WebSite → url, name
-- WebPage → url, name
-- Organization → name
-
-Formats:
-- URL: url, contentUrl, embedUrl, logo
-- ISO8601 date/datetime: datePublished, dateModified, startDate, endDate, uploadDate, priceValidUntil
-- ISO8601 duration: duration (VideoObject)
-- Enums: Offer.availability, Offer.itemCondition (official schema.org URL enums or any valid URL)
-
-Policies:
-- on_invalid = 'skip' — the parameter is ignored and added to the error buffer
-- on_invalid = 'error' — throws InvalidArgumentException
-
-Validation errors buffer:
 ```php
-$html = Theme::structured($data, ['on_invalid'=>'skip']);
-$errors = Theme::structuredErrors(); // array of messages
+$html = Theme::structured($data, ['on_invalid' => 'skip']);
+$errors = Theme::structuredErrors();
 ```
-
----
-
-## Schema Types constants
-
-Import useful constants from Dominservice\LaravelThemeHelper\Schema\Types when building shortcuts. Examples include: ORGANIZATION, PRODUCT, ARTICLE, BREADCRUMB, WEBSITE, WEBPAGE, VIDEO_OBJECT, FAQ_PAGE, HOW_TO, LOCAL_BUSINESS, RECIPE, SOFTWARE_APPLICATION, JOB_POSTING, ITEM_LIST, IMAGE_OBJECT, AUDIO_OBJECT, BOOK, DATASET, SERVICE — and more as provided in the package.
-
----
-
-## Validation, policies and errors
-
-- Validation is intentionally light: it focuses on common Rich Results requirements and basic format checks.
-- It does not block future fields/types (especially in RAW @graph mode).
-- With on_invalid = 'skip' all diagnostics are collected and accessible via Theme::structuredErrors().
 
 ---
 
 ## Blade integration
 
-Use the ready‑made renderers in your layout:
+Simple layout:
 
 ```blade
-{{-- resources/views/layouts/app.blade.php --}}
 <head>
     {!! Theme::renderHead() !!}
 </head>
@@ -384,58 +404,89 @@ Use the ready‑made renderers in your layout:
 </body>
 ```
 
-Set page values inside views or controllers:
+Theme-aware public layout:
 
 ```blade
 @php
-Theme::meta()
-    ->setTitle($title ?? 'Page')
-    ->setDescription($description ?? null)
-    ->setCanonical(url()->current());
+    Theme::assets()->useTheme('public');
+    $publicTheme = Theme::currentTheme('public');
 @endphp
+
+@extends($publicTheme->layout() ?? 'layouts.app')
 ```
 
-You can also use the global helper for Structured Data:
+Controller example:
 
 ```php
-// helpers.php
-theme_structured_data([
-    'type' => \Dominservice\LaravelThemeHelper\Schema\Types::ORGANIZATION,
-    'name' => config('app.name'),
-]);
+use Dominservice\LaravelThemeHelper\Facades\Theme;
+
+Theme::useTheme('public-metronic', 'public');
+Theme::meta()
+    ->setTitle('DSO-IT')
+    ->setCanonical(url()->current());
 ```
+
+---
+
+## Helpers
+
+Available helpers:
+
+- `theme_structured_data(array $data, array $options = [])`
+- `theme_current_theme(string $context = 'public')`
+- `theme_current_layout(string $context = 'public')`
+- `theme_use(string $themeKey, ?string $context = null)`
+
+Examples:
+
+```php
+theme_use('public-metronic', 'public');
+
+$theme = theme_current_theme('public');
+$layout = theme_current_layout('public');
+```
+
+---
+
+## Deployment notes
+
+The package does not build assets by itself.
+
+Instead, it stores enough metadata to let your application or deployment pipeline know:
+
+- which theme is active,
+- which build driver the theme uses,
+- where the build config lives,
+- where the manifest is expected,
+- where the compiled assets are served from,
+- where the deployment target should be.
+
+Recommended usage:
+
+- keep each public theme in its own directory,
+- keep a separate `webpack.mix.js` or `vite.config.js` per theme,
+- define the output path in the theme config,
+- let deployment scripts build only the selected themes.
+
+This package is intentionally a runtime integration layer, not a build runner.
 
 ---
 
 ## Testing
 
-This is a library, so it ships without a full application skeleton. In your host app:
+Run package tests as usual:
 
 ```bash
-composer require --dev phpunit/phpunit
 ./vendor/bin/phpunit
 ```
 
-A good starting point is to add integration tests that assert the generated HTML/JSON‑LD and the behavior of validation policies (on_invalid).
+Recommended additional tests in host applications:
 
----
-
-## FAQ
-
-1) Is Spatie required?  
-Yes. The package depends on spatie/schema-org and uses it whenever possible, while still allowing a permissive RAW fallback and extra format checks.
-
-2) Is LaravelLocalization required?  
-No. You can add hreflang alternates manually via addAlternate(). If the package is present, autoFromLaravelLocalization() will pick them up.
-
-3) Does the package impose a project structure?  
-No. It exposes services and a facade. Use only the modules you need.
-
----
-
-## Support
-### Support this project (Ko‑fi)
-If this package saves you time, consider buying me a coffee: https://ko-fi.com/dominservice — thank you!
+- current theme resolution
+- mix manifest resolution
+- vite manifest and hot-file resolution
+- admin/public layout switching
+- render output for meta, hreflang and scripts
 
 ---
 
