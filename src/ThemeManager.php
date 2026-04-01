@@ -9,6 +9,9 @@ use Dominservice\LaravelThemeHelper\Support\Assets\AssetManager;
 use Dominservice\LaravelThemeHelper\Support\Meta\MetaManager;
 use Dominservice\LaravelThemeHelper\Support\Navigation\Breadcrumbs;
 use Dominservice\LaravelThemeHelper\Support\Localization\Hreflang;
+use Dominservice\LaravelThemeHelper\Support\Themes\ThemeContextManager;
+use Dominservice\LaravelThemeHelper\Support\Themes\ThemeDefinition;
+use Dominservice\LaravelThemeHelper\Support\Themes\ThemeRegistry;
 
 final class ThemeManager
 {
@@ -18,6 +21,8 @@ final class ThemeManager
         private readonly AssetManager $assets,
         private readonly Breadcrumbs $breadcrumbs,
         private readonly Hreflang $hreflang,
+        private readonly ThemeRegistry $registry,
+        private readonly ThemeContextManager $contexts,
     ) {}
 
     /** ========== Structured Data ========== */
@@ -66,6 +71,28 @@ final class ThemeManager
     public function hreflang(): Hreflang
     {
         return $this->hreflang;
+    }
+
+    public function registry(): ThemeRegistry
+    {
+        return $this->registry;
+    }
+
+    public function contexts(): ThemeContextManager
+    {
+        return $this->contexts;
+    }
+
+    public function currentTheme(string $context = 'public'): ThemeDefinition
+    {
+        return $this->contexts->current($context);
+    }
+
+    public function useTheme(string $themeKey, ?string $context = null): self
+    {
+        $this->contexts->use($themeKey, $context);
+
+        return $this;
     }
 
     /** ========== Renderery gotowych fragmentów HEAD/BODY ========== */
