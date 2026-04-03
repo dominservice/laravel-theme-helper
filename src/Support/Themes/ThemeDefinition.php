@@ -42,54 +42,63 @@ final class ThemeDefinition
     public function layout(): ?string
     {
         $value = $this->config['layout'] ?? null;
+
         return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function viewPath(): ?string
     {
         $value = $this->config['view_path'] ?? null;
+
         return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function buildConfigPath(): ?string
     {
         $value = $this->config['build_config_path'] ?? null;
+
         return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function manifestPath(): ?string
     {
         $value = $this->config['manifest_path'] ?? null;
+
         return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function hotFilePath(): ?string
     {
         $value = $this->config['hot_file_path'] ?? null;
+
         return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function devServerUrl(): ?string
     {
         $value = $this->config['dev_server_url'] ?? null;
+
         return is_string($value) && $value !== '' ? rtrim($value, '/') : null;
     }
 
     public function publicPath(): ?string
     {
         $value = $this->config['public_path'] ?? null;
+
         return is_string($value) && $value !== '' ? trim($value, '/') : null;
     }
 
     public function assetUrl(): ?string
     {
         $value = $this->config['asset_url'] ?? null;
+
         return is_string($value) && $value !== '' ? rtrim($value, '/') : null;
     }
 
     public function deployTarget(): ?string
     {
         $value = $this->config['deploy_target'] ?? null;
+
         return is_string($value) && $value !== '' ? $value : null;
     }
 
@@ -109,6 +118,52 @@ final class ThemeDefinition
     public function meta(): array
     {
         return (array) ($this->config['meta'] ?? []);
+    }
+
+    public function description(): ?string
+    {
+        $value = $this->config['description'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function version(): ?string
+    {
+        $value = $this->config['version'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function author(): mixed
+    {
+        return $this->config['author'] ?? null;
+    }
+
+    public function previewImage(): ?string
+    {
+        $value = $this->config['preview_image'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /** @return array<string,mixed> */
+    public function settings(): array
+    {
+        return (array) ($this->config['settings'] ?? []);
+    }
+
+    public function sourcePath(): ?string
+    {
+        $value = $this->config['source_path'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function manifestSourcePath(): ?string
+    {
+        $value = $this->config['manifest_path_source'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /** @return array<string,mixed> */

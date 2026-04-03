@@ -11,9 +11,13 @@ A Laravel package for:
 - asset registration and rendering,
 - breadcrumb and hreflang support,
 - JSON-LD / Schema.org generation,
+- sitemap and `robots.txt` generation helpers,
+- responsive image rendering with `picture` / AVIF / WebP / fallback support,
+- schema presets for common company and CMS pages,
 - theme registry and active theme selection,
 - public/admin theme context handling,
-- asset resolution for `mix`, `vite`, and static builds.
+- asset resolution for `mix`, `vite`, and static builds,
+- theme discovery through `theme.json` manifests.
 
 It is designed to be the integration layer between your Laravel application and one or more frontend themes, while still providing the usual `<head>` and `</body>` helpers.
 
@@ -27,15 +31,17 @@ It is designed to be the integration layer between your Laravel application and 
 - [Theme system](#theme-system)
   - [Contexts](#contexts)
   - [Theme config](#theme-config)
+  - [Theme discovery with `theme.json`](#theme-discovery-with-themejson)
   - [Drivers](#drivers)
   - [Theme switching](#theme-switching)
+- [Structured data](#structured-data)
+  - [Multiple schema types on one page](#multiple-schema-types-on-one-page)
+  - [Schema collection API](#schema-collection-api)
+  - [Schema presets](#schema-presets)
+- [Sitemap](#sitemap)
+- [Robots.txt](#robotstxt)
+- [Responsive images](#responsive-images)
 - [API](#api)
-  - [Theme manager](#theme-manager)
-  - [MetaManager](#metamanager)
-  - [AssetManager](#assetmanager)
-  - [Breadcrumbs](#breadcrumbs)
-  - [Hreflang](#hreflang)
-  - [Structured data](#structured-data)
 - [Blade integration](#blade-integration)
 - [Helpers](#helpers)
 - [Deployment notes](#deployment-notes)
@@ -87,8 +93,7 @@ Theme::meta()
     ->setDescription('Software house and custom web systems')
     ->setCanonical(url()->current());
 
-Theme::assets()
-    ->useTheme('public');
+Theme::assets()->useTheme('public');
 
 echo Theme::renderHead();
 echo Theme::renderBodyEnd();
@@ -140,39 +145,68 @@ return [
             'context' => 'admin',
             'driver' => 'static',
             'layout' => null,
-            'build_config_path' => null,
-            'manifest_path' => null,
-            'hot_file_path' => null,
-            'dev_server_url' => null,
-            'public_path' => null,
-            'asset_url' => null,
-            'deploy_target' => null,
+            'view_path' => null,
             'entries' => [
                 'css' => [],
                 'js' => [],
             ],
+            'meta' => [],
         ],
-        'public-metronic' => [
-            'label' => 'Public Metronic',
-            'context' => 'public',
-            'driver' => 'vite',
-            'layout' => 'themes.public-metronic.layouts.app',
-            'build_config_path' => base_path('themes/public-metronic/vite.config.js'),
-            'manifest_path' => public_path('themes/public-metronic/.vite/manifest.json'),
-            'hot_file_path' => base_path('themes/public-metronic/public.hot'),
-            'dev_server_url' => env('PUBLIC_METRONIC_VITE_DEV_SERVER'),
-            'asset_url' => env('APP_URL') . '/themes/public-metronic',
-            'deploy_target' => public_path('themes/public-metronic'),
-            'entries' => [
-                'css' => [],
-                'js' => [
-                    'resources/app.js',
-                ],
-            ],
-        ],
+    ],
+
+    'discovery' => [
+        'enabled' => false,
+        'manifest_filename' => 'theme.json',
+        'scan_paths' => [],
     ],
 ];
 ```
+
+### Theme discovery with `theme.json`
+
+The package can discover themes from one or more directories. This lets you keep your application-defined themes in config while also supporting uploaded or shipped themes described by a manifest.
+
+Example config:
+
+```php
+'discovery' => [
+    'enabled' => true,
+    'manifest_filename' => 'theme.json',
+    'scan_paths' => [
+        resource_path('themes'),
+        base_path('themes'),
+    ],
+],
+```
+
+Example `theme.json`:
+
+```json
+{
+  "key": "classic",
+  "label": "Classic",
+  "context": "public",
+  "driver": "mix",
+  "layout": "themes.classic.layouts.app",
+  "view_path": "resources/views/themes/classic",
+  "manifest_path": "public/themes/classic/mix-manifest.json",
+  "deploy_target": "public/themes/classic",
+  "entries": {
+    "css": ["themes/classic/app.css"],
+    "js": ["themes/classic/app.js"]
+  },
+  "description": "Base public theme",
+  "version": "1.0.0",
+  "author": {
+    "name": "Domin Software"
+  },
+  "settings": {
+    "supports_upload": true
+  }
+}
+```
+
+If a theme key already exists in config, config has priority over discovered manifests. This makes discovery safe for local overrides.
 
 ### Drivers
 
@@ -182,76 +216,224 @@ Supported asset drivers:
 - `mix`
 - `vite`
 
-#### `static`
-
-Use for pre-resolved assets or manually declared URLs:
-
-```php
-'driver' => 'static',
-'entries' => [
-    'css' => ['assets/css/app.css'],
-    'js' => ['assets/js/app.js'],
-],
-```
-
-#### `mix`
-
-Use when the theme has its own `mix-manifest.json`:
-
-```php
-'driver' => 'mix',
-'manifest_path' => public_path('themes/public-alt/mix-manifest.json'),
-'entries' => [
-    'css' => ['themes/public-alt/app.css'],
-    'js' => ['themes/public-alt/app.js'],
-],
-```
-
-#### `vite`
-
-Use when the theme has its own Vite manifest and optionally a hot file:
-
-```php
-'driver' => 'vite',
-'manifest_path' => public_path('themes/public-metronic/.vite/manifest.json'),
-'hot_file_path' => base_path('themes/public-metronic/public.hot'),
-'dev_server_url' => env('PUBLIC_METRONIC_VITE_DEV_SERVER'),
-'entries' => [
-    'js' => ['resources/app.js'],
-],
-```
-
-If `hot_file_path` exists and contains a dev-server URL, the package will render dev assets with `@vite/client`.
-
 ### Theme switching
-
-Switching themes:
 
 ```php
 Theme::useTheme('public-metronic', 'public');
 Theme::useTheme('admin', 'admin');
-```
 
-Reading current theme:
-
-```php
 $theme = Theme::currentTheme('public');
 $layout = $theme->layout();
 $driver = $theme->driver();
+$description = $theme->description();
+$previewImage = $theme->previewImage();
 ```
 
-Registering themes at runtime:
+---
+
+## Structured data
+
+### Multiple schema types on one page
+
+Google supports multiple structured data items on the same page when they describe user-visible content on that page. This is useful for pages that need more than one schema type at once, for example:
+
+- `Organization`
+- `WebSite`
+- `WebPage`
+- `BreadcrumbList`
+- `Product`
+- `Service`
+- `FAQPage`
+
+This package supports that pattern through `@graph`.
+
+Simple example:
 
 ```php
-Theme::registry()->register('public-alt', [
-    'label' => 'Public Alt',
-    'context' => 'public',
-    'driver' => 'mix',
-    'manifest_path' => public_path('themes/public-alt/mix-manifest.json'),
-    'entries' => [
-        'css' => ['themes/public-alt/app.css'],
-        'js' => ['themes/public-alt/app.js'],
+echo Theme::structuredGraph([
+    [
+        '@type' => 'Organization',
+        'name' => 'Domin Software',
+        'url' => 'https://example.com',
     ],
+    [
+        '@type' => 'WebPage',
+        'name' => 'CRM systems',
+        'url' => 'https://example.com/crm',
+    ],
+    [
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => 'Home',
+                'item' => 'https://example.com',
+            ],
+        ],
+    ],
+]);
+```
+
+### Schema collection API
+
+```php
+$schemas = Theme::schemaCollection()
+    ->organization([
+        'name' => 'Domin Software',
+        'url' => 'https://example.com',
+    ])
+    ->product([
+        'name' => 'CMS Starter',
+    ])
+    ->service([
+        'name' => 'CRM implementation',
+        'serviceType' => 'Custom CRM development',
+    ]);
+
+echo Theme::structuredGraph($schemas);
+```
+
+This lets you output one graph that contains separate entities for organization data, product data, services, breadcrumbs or page-level metadata.
+
+### Schema presets
+
+For common business pages you often want a repeatable graph instead of building every entity manually.
+
+Available preset keys:
+
+- `organization`
+- `website`
+- `home_page`
+- `web_page`
+- `service_page`
+- `product_page`
+- `faq_page`
+
+Example:
+
+```php
+$schemas = Theme::schemaPreset('service_page', [
+    'organization' => [
+        'name' => 'Domin Software',
+        'url' => 'https://example.com',
+        'logo' => 'https://example.com/logo.png',
+    ],
+    'web_page' => [
+        'name' => 'CRM systems',
+        'url' => 'https://example.com/crm',
+        'description' => 'Custom CRM systems for companies',
+    ],
+    'service' => [
+        'name' => 'CRM implementation',
+        'serviceType' => 'Custom CRM development',
+    ],
+    'breadcrumbs' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => 'https://example.com'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'CRM', 'item' => 'https://example.com/crm'],
+    ],
+]);
+
+echo Theme::structuredGraph($schemas);
+```
+
+---
+
+## Sitemap
+
+The package includes a builder for XML sitemaps. It supports:
+
+- standard `urlset`,
+- `sitemapindex`,
+- image sitemap extensions,
+- alternate locale URLs through `xhtml:link`,
+- configurable default `changefreq` and `priority`.
+
+Example:
+
+```php
+$xml = Theme::sitemap()
+    ->addUrl('https://example.com/', [
+        'lastmod' => now(),
+        'changefreq' => 'daily',
+        'priority' => '1.0',
+        'alternates' => [
+            ['hreflang' => 'pl-PL', 'href' => 'https://example.com/'],
+            ['hreflang' => 'en-US', 'href' => 'https://example.com/en'],
+        ],
+        'images' => [
+            [
+                'loc' => 'https://example.com/storage/hero.webp',
+                'title' => 'Homepage hero image',
+            ],
+        ],
+    ])
+    ->renderUrlset();
+```
+
+For sitemap indexes:
+
+```php
+$index = Theme::sitemap()
+    ->addSitemap('https://example.com/sitemap-pages.xml')
+    ->addSitemap('https://example.com/sitemap-blog.xml')
+    ->renderIndex();
+```
+
+---
+
+## Robots.txt
+
+The package also includes a builder for `robots.txt`.
+
+Example:
+
+```php
+$robots = Theme::robots()
+    ->addGroup('*', allow: ['/'], disallow: ['/admin', '/login'])
+    ->addSitemap('https://example.com/sitemap.xml')
+    ->setHost('example.com')
+    ->render();
+```
+
+---
+
+## Responsive images
+
+The package includes a small renderer for SEO-friendly responsive images with modern formats.
+
+Example using explicit `<source>` nodes:
+
+```php
+echo Theme::images()->picture([
+    [
+        'type' => 'image/avif',
+        'srcset' => asset('themes/classic/img/about.avif'),
+        'media' => '(min-width: 768px)',
+    ],
+    [
+        'type' => 'image/webp',
+        'srcset' => asset('themes/classic/img/about.webp'),
+    ],
+], [
+    'src' => asset('themes/classic/img/about.jpg'),
+    'alt' => 'About section visual',
+    'width' => 1400,
+    'height' => 1040,
+]);
+```
+
+Or using a simpler format map:
+
+```php
+echo Theme::images()->pictureFromFormats([
+    'avif' => asset('themes/classic/img/about.avif'),
+    'webp' => asset('themes/classic/img/about.webp'),
+    'jpg' => asset('themes/classic/img/about.jpg'),
+], [
+    'alt' => 'About section visual',
+    'width' => 1400,
+    'height' => 1040,
 ]);
 ```
 
@@ -259,140 +441,31 @@ Theme::registry()->register('public-alt', [
 
 ## API
 
-### Theme manager
-
 Main facade methods:
 
-- `Theme::meta()`
-- `Theme::assets()`
-- `Theme::breadcrumbs()`
-- `Theme::hreflang()`
-- `Theme::structured(array $data, array $options = [])`
-- `Theme::structuredErrors()`
-- `Theme::breadcrumbJsonLd(array $items, array $options = [])`
-- `Theme::registry()`
-- `Theme::contexts()`
-- `Theme::currentTheme(string $context = 'public')`
-- `Theme::useTheme(string $themeKey, ?string $context = null)`
-- `Theme::renderHead()`
-- `Theme::renderBodyEnd()`
-
-### MetaManager
-
-Examples:
-
 ```php
-Theme::meta()
-    ->setTitle('Title', 'Site Name')
-    ->setDescription('Page description')
-    ->setKeywords('software house, laravel, cms')
-    ->setRobots('index,follow')
-    ->setCanonical(url()->current())
-    ->setOg([
-        'type' => 'website',
-        'image' => asset('og.jpg'),
-    ])
-    ->setTwitter([
-        'card' => 'summary_large_image',
-    ]);
-```
-
-CSRF meta:
-
-```php
-Theme::meta()->withCsrf();
-Theme::meta()->withCsrf(true, $token);
-```
-
-### AssetManager
-
-Manual assets:
-
-```php
-Theme::assets()
-    ->dnsPrefetch('//fonts.googleapis.com')
-    ->preload(asset('css/app.css'), 'style')
-    ->addStylesheet(asset('css/app.css'))
-    ->addScript(asset('js/app.js'), defer: true)
-    ->inlineCss('.hero{display:grid;}')
-    ->inlineJs('window.__boot = true;');
-```
-
-Theme-driven assets:
-
-```php
-Theme::assets()->useTheme('public');
-```
-
-This will resolve CSS/JS using the currently active theme for that context.
-
-Multiple contexts are supported:
-
-```php
-Theme::assets()
-    ->useTheme('admin')
-    ->useTheme('public');
-```
-
-### Breadcrumbs
-
-```php
-$items = [
-    ['name' => 'Home', 'url' => url('/')],
-    ['name' => 'Services', 'url' => url('/services')],
-    ['name' => 'Laravel CMS'],
-];
-
-echo Theme::breadcrumbs()->render($items);
-echo Theme::breadcrumbJsonLd($items);
-```
-
-### Hreflang
-
-```php
-Theme::hreflang()->autoFromLaravelLocalization();
-
-Theme::hreflang()
-    ->addAlternate('https://example.com/en', 'en-US')
-    ->addAlternate('https://example.com/pl', 'pl-PL');
-```
-
-### Structured data
-
-RAW graph mode:
-
-```php
-echo Theme::structured([
-    'schemas' => [
-        ['@type' => 'Organization', 'name' => config('app.name'), 'url' => config('app.url')],
-        ['@type' => 'WebSite', 'name' => config('app.name'), 'url' => config('app.url')],
-    ],
-]);
-```
-
-Shortcut mode:
-
-```php
-use Dominservice\LaravelThemeHelper\Schema\Types;
-
-echo Theme::structured([
-    'type' => Types::SERVICE,
-    'name' => 'Laravel CMS development',
-]);
-```
-
-Validation errors:
-
-```php
-$html = Theme::structured($data, ['on_invalid' => 'skip']);
-$errors = Theme::structuredErrors();
+Theme::meta();
+Theme::assets();
+Theme::breadcrumbs();
+Theme::hreflang();
+Theme::sitemap();
+Theme::robots();
+Theme::schemaPreset('home_page', [...]);
+Theme::images();
+Theme::registry();
+Theme::contexts();
+Theme::currentTheme('public');
+Theme::useTheme('classic', 'public');
+Theme::structured([...]);
+Theme::schemaCollection();
+Theme::structuredGraph([...]);
+Theme::renderHead();
+Theme::renderBodyEnd();
 ```
 
 ---
 
 ## Blade integration
-
-Simple layout:
 
 ```blade
 <head>
@@ -400,30 +473,9 @@ Simple layout:
 </head>
 <body>
     @yield('content')
+
     {!! Theme::renderBodyEnd() !!}
 </body>
-```
-
-Theme-aware public layout:
-
-```blade
-@php
-    Theme::assets()->useTheme('public');
-    $publicTheme = Theme::currentTheme('public');
-@endphp
-
-@extends($publicTheme->layout() ?? 'layouts.app')
-```
-
-Controller example:
-
-```php
-use Dominservice\LaravelThemeHelper\Facades\Theme;
-
-Theme::useTheme('public-metronic', 'public');
-Theme::meta()
-    ->setTitle('DSO-IT')
-    ->setCanonical(url()->current());
 ```
 
 ---
@@ -433,63 +485,43 @@ Theme::meta()
 Available helpers:
 
 - `theme_structured_data(array $data, array $options = [])`
+- `theme_structured_graph(array $schemas, array $options = [])`
+- `theme_sitemap()`
+- `theme_robots()`
+- `theme_schema_preset(string $preset, array $data = [])`
+- `theme_picture(array $sources, array $imgAttributes = [], array $pictureAttributes = [])`
 - `theme_current_theme(string $context = 'public')`
 - `theme_current_layout(string $context = 'public')`
 - `theme_use(string $themeKey, ?string $context = null)`
-
-Examples:
-
-```php
-theme_use('public-metronic', 'public');
-
-$theme = theme_current_theme('public');
-$layout = theme_current_layout('public');
-```
 
 ---
 
 ## Deployment notes
 
-The package does not build assets by itself.
+Theme definitions can now also carry:
 
-Instead, it stores enough metadata to let your application or deployment pipeline know:
+- `build_config_path`
+- `manifest_path`
+- `hot_file_path`
+- `deploy_target`
+- `source_path`
+- `preview_image`
+- `settings`
 
-- which theme is active,
-- which build driver the theme uses,
-- where the build config lives,
-- where the manifest is expected,
-- where the compiled assets are served from,
-- where the deployment target should be.
-
-Recommended usage:
-
-- keep each public theme in its own directory,
-- keep a separate `webpack.mix.js` or `vite.config.js` per theme,
-- define the output path in the theme config,
-- let deployment scripts build only the selected themes.
-
-This package is intentionally a runtime integration layer, not a build runner.
+This makes the package a good base for future theme upload, import/export and theme management panels without forcing a specific storage model today.
 
 ---
 
 ## Testing
 
-Run package tests as usual:
+Run package tests:
 
 ```bash
-./vendor/bin/phpunit
+vendor/bin/phpunit
 ```
-
-Recommended additional tests in host applications:
-
-- current theme resolution
-- mix manifest resolution
-- vite manifest and hot-file resolution
-- admin/public layout switching
-- render output for meta, hreflang and scripts
 
 ---
 
 ## License
 
-MIT © Dominservice
+MIT
