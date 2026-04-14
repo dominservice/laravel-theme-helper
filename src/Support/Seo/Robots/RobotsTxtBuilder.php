@@ -24,13 +24,14 @@ final class RobotsTxtBuilder
         $this->host = $config['host'] ?? null;
     }
 
-    public function addGroup(string $userAgent, array $allow = [], array $disallow = [], ?int $crawlDelay = null): self
+    public function addGroup(string $userAgent, array $allow = [], array $disallow = [], ?int $crawlDelay = null, array $extras = []): self
     {
         $this->groups[] = [
             'user_agent' => $userAgent,
             'allow' => array_values($allow),
             'disallow' => array_values($disallow),
             'crawl_delay' => $crawlDelay,
+            'extras' => array_values(array_filter($extras, static fn (mixed $line): bool => is_string($line) && trim($line) !== '')),
         ];
 
         return $this;
@@ -71,6 +72,10 @@ final class RobotsTxtBuilder
 
             if (!empty($group['crawl_delay'])) {
                 $lines[] = 'Crawl-delay: ' . (int) $group['crawl_delay'];
+            }
+
+            foreach ((array) ($group['extras'] ?? []) as $line) {
+                $lines[] = trim((string) $line);
             }
         }
 

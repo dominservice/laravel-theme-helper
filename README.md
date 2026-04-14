@@ -107,6 +107,8 @@ echo Theme::renderHead();
 echo Theme::renderBodyEnd();
 ```
 
+`RobotsTxtBuilder::addGroup()` wspiera także `extras`, więc można dodać dyrektywy specyficzne dla wybranych botów, np. `Max-image-preview: large`.
+
 `setIcons()` wspiera także pełniejsze deklaracje favicon/PWA, m.in. `apple_touch`, `icon`, `manifest`, `mask_icon`, `mask_color`, `ms_tile_image`, `ms_tile_color` i `theme_color`.
 `MetaManager` wspiera też dodatkowe tagi head przez `setAuthor()`, `setGenerator()`, `addMeta()` i `setHttpEquiv()`.
 
