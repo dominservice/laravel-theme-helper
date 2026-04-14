@@ -17,6 +17,8 @@ final class MetaManager
     /** Basic head metas */
     private ?string $charset = 'utf-8';
     private ?string $viewport = 'width=device-width, initial-scale=1';
+    private array $namedMeta = [];
+    private array $httpEquivMeta = [];
 
     /** CSRF/XSRF meta control */
     private bool $emitCsrf = false;
@@ -67,6 +69,58 @@ final class MetaManager
     public function setViewport(?string $viewport): self
     {
         $this->viewport = $viewport !== null ? trim($viewport) : null;
+        return $this;
+    }
+
+    public function setAuthor(?string $author): self
+    {
+        return $this->addMeta('author', $author);
+    }
+
+    public function setGenerator(?string $generator): self
+    {
+        return $this->addMeta('generator', $generator);
+    }
+
+    public function addMeta(string $name, ?string $content): self
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return $this;
+        }
+
+        $content = $content !== null ? trim($content) : null;
+
+        if ($content === null || $content === '') {
+            unset($this->namedMeta[$name]);
+
+            return $this;
+        }
+
+        $this->namedMeta[$name] = $content;
+
+        return $this;
+    }
+
+    public function setHttpEquiv(string $name, ?string $content): self
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return $this;
+        }
+
+        $content = $content !== null ? trim($content) : null;
+
+        if ($content === null || $content === '') {
+            unset($this->httpEquivMeta[$name]);
+
+            return $this;
+        }
+
+        $this->httpEquivMeta[$name] = $content;
+
         return $this;
     }
 
@@ -162,6 +216,12 @@ final class MetaManager
             $out[] = '<meta name="viewport" content="'.e($this->viewport).'">';
         }
 
+        foreach ($this->httpEquivMeta as $name => $content) {
+            if ($name !== '' && $content !== '') {
+                $out[] = '<meta http-equiv="'.e((string) $name).'" content="'.e((string) $content).'">';
+            }
+        }
+
         // <title>
         $title = $this->title ?? config('app.name');
         if ($title) {
@@ -176,6 +236,11 @@ final class MetaManager
         if ($this->description) { $out[] = '<meta name="description" content="'.e($this->description).'">'; }
         if ($this->keywords)    { $out[] = '<meta name="keywords" content="'.e($this->keywords).'">'; }
         if ($this->robots)      { $out[] = '<meta name="robots" content="'.e($this->robots).'">'; }
+        foreach ($this->namedMeta as $name => $content) {
+            if ($name !== '' && $content !== '') {
+                $out[] = '<meta name="'.e((string) $name).'" content="'.e((string) $content).'">';
+            }
+        }
 
         // canonical + prev/next
         if ($this->canonical) { $out[] = '<link rel="canonical" href="'.e($this->canonical).'">'; }
@@ -317,7 +382,12 @@ final class MetaManager
             $push($out, 'mstile', '<meta name="msapplication-TileImage" content="'.e($this->icons['ms_tile_image']).'">');
         }
 
-        // 6) Mask icon (Safari) – jeśli ktoś ustawi w icons; nic nie wymyślamy
+        // 6) Theme color (PWA/browser chrome)
+        if (!empty($this->icons['theme_color']) && is_string($this->icons['theme_color'])) {
+            $push($out, 'themecolor', '<meta name="theme-color" content="'.e($this->icons['theme_color']).'">');
+        }
+
+        // 7) Mask icon (Safari) – jeśli ktoś ustawi w icons; nic nie wymyślamy
         if (!empty($this->icons['mask_icon']) && is_string($this->icons['mask_icon'])) {
             $color = !empty($this->icons['mask_color']) ? $this->icons['mask_color'] : '#000000';
             $push($out, 'mask', '<link rel="mask-icon" href="'.e($this->icons['mask_icon']).'" color="'.e($color).'">');

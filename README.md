@@ -91,13 +91,24 @@ use Dominservice\LaravelThemeHelper\Facades\Theme;
 Theme::meta()
     ->setTitle('DSO-IT', config('app.name'))
     ->setDescription('Software house and custom web systems')
-    ->setCanonical(url()->current());
+    ->setCanonical(url()->current())
+    ->setAuthor('Domin Software')
+    ->setGenerator('DomiPress')
+    ->setHttpEquiv('X-UA-Compatible', 'IE=edge')
+    ->setIcons([
+        'favicon' => asset('favicon.ico'),
+        'manifest' => asset('site.webmanifest'),
+        'theme_color' => '#0f172a',
+    ]);
 
 Theme::assets()->useTheme('public');
 
 echo Theme::renderHead();
 echo Theme::renderBodyEnd();
 ```
+
+`setIcons()` wspiera także pełniejsze deklaracje favicon/PWA, m.in. `apple_touch`, `icon`, `manifest`, `mask_icon`, `mask_color`, `ms_tile_image`, `ms_tile_color` i `theme_color`.
+`MetaManager` wspiera też dodatkowe tagi head przez `setAuthor()`, `setGenerator()`, `addMeta()` i `setHttpEquiv()`.
 
 Switch public theme dynamically:
 
