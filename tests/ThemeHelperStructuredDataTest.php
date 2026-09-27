@@ -1,7 +1,51 @@
 <?php
-use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/../Theme.v3.php';
+use Dominservice\LaravelThemeHelper\Schema\Types;
+use Dominservice\LaravelThemeHelper\ThemeStructuredData;
+use PHPUnit\Framework\TestCase;
+use Spatie\SchemaOrg\Schema;
+
+final class ThemeHelper
+{
+    public const SCHEMA_PRODUCT = Types::PRODUCT;
+
+    public const SCHEMA_ARTICLE = Types::ARTICLE;
+
+    public const SCHEMA_BREADCRUMB = Types::BREADCRUMB;
+
+    public const SCHEMA_EVENT = Types::EVENT;
+
+    public const SCHEMA_FAQPAGE = Types::FAQPAGE;
+
+    public const SCHEMA_HOWTO = Types::HOWTO;
+
+    public const SCHEMA_LOCALBUSINESS = Types::LOCALBUSINESS;
+
+    public const SCHEMA_VIDEOOBJECT = Types::VIDEOOBJECT;
+
+    public const SCHEMA_RECIPE = Types::RECIPE;
+
+    public const SCHEMA_SOFTWAREAPPLICATION = Types::SOFTWAREAPPLICATION;
+
+    public const SCHEMA_JOBPOSTING = Types::JOBPOSTING;
+
+    public const SCHEMA_ITEMLIST = Types::ITEMLIST;
+
+    public const SCHEMA_IMAGEOBJECT = Types::IMAGEOBJECT;
+
+    public const SCHEMA_WEBSITE = Types::WEBSITE;
+
+    public const SCHEMA_WEBPAGE = Types::WEBPAGE;
+
+    public const SCHEMA_ORGANIZATION = Types::ORGANIZATION;
+
+    public static function smartStructuredData(array $data, array $options = []): string
+    {
+        $options['attach_inLanguage'] ??= false;
+
+        return ThemeStructuredData::smartStructuredData($data, $options);
+    }
+}
 
 final class ThemeHelperStructuredDataTest extends TestCase
 {
@@ -9,7 +53,7 @@ final class ThemeHelperStructuredDataTest extends TestCase
     private function decodeGraph(string $html): array
     {
         $this->assertStringContainsString('<script type="application/ld+json">', $html);
-        $json = trim(str_replace(['<script type="application/ld+json">','</script>'], '', $html));
+        $json = trim(str_replace(['<script type="application/ld+json">', '</script>'], '', $html));
         $payload = json_decode($json, true);
         $this->assertIsArray($payload);
         $this->assertArrayHasKey('@context', $payload);
@@ -17,6 +61,7 @@ final class ThemeHelperStructuredDataTest extends TestCase
         $this->assertArrayHasKey('@graph', $payload);
         $this->assertIsArray($payload['@graph']);
         $this->assertNotEmpty($payload['@graph']);
+
         return $payload['@graph'];
     }
 
@@ -26,92 +71,92 @@ final class ThemeHelperStructuredDataTest extends TestCase
         $this->assertEquals($type, $node['@type']);
     }
 
-    public function testProduct(): void
+    public function test_product(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_PRODUCT,
             'name' => 'EcoChatka 70',
             'image' => ['https://example.com/i.jpg'],
-            'offers' => [['price'=>'129900','priceCurrency'=>'PLN','availability'=>'https://schema.org/InStock','url'=>'https://example.com/p']],
-            'aggregateRating' => ['ratingValue'=>4.8,'reviewCount'=>37],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+            'offers' => [['price' => '129900', 'priceCurrency' => 'PLN', 'availability' => 'https://schema.org/InStock', 'url' => 'https://example.com/p']],
+            'aggregateRating' => ['ratingValue' => 4.8, 'reviewCount' => 37],
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'Product');
         $this->assertArrayHasKey('offers', $graph[0]);
     }
 
-    public function testArticle(): void
+    public function test_article(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_ARTICLE,
             'headline' => 'Tytuł',
             'image' => ['https://example.com/a.jpg'],
             'datePublished' => '2025-01-01T10:00:00+01:00',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'Article');
     }
 
-    public function testBreadcrumb(): void
+    public function test_breadcrumb(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_BREADCRUMB,
             'items' => [
-                ['name'=>'Start','item'=>'https://example.com/'],
-                ['name'=>'Kategoria','item'=>'https://example.com/kategoria'],
-            ]
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+                ['name' => 'Start', 'item' => 'https://example.com/'],
+                ['name' => 'Kategoria', 'item' => 'https://example.com/kategoria'],
+            ],
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'BreadcrumbList');
         $this->assertArrayHasKey('itemListElement', $graph[0]);
     }
 
-    public function testEvent(): void
+    public function test_event(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_EVENT,
             'name' => 'Targi',
             'startDate' => '2025-05-01T12:00:00+01:00',
             'endDate' => '2025-05-01T18:00:00+01:00',
-            'location' => ['@type'=>'Place','name'=>'Hala','address'=>'Miasto'],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+            'location' => ['@type' => 'Place', 'name' => 'Hala', 'address' => 'Miasto'],
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'Event');
     }
 
-    public function testFAQ(): void
+    public function test_faq(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_FAQPAGE,
-            'faqs' => [['question'=>'Q?','answer'=>'A.']],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+            'faqs' => [['question' => 'Q?', 'answer' => 'A.']],
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'FAQPage');
     }
 
-    public function testHowTo(): void
+    public function test_how_to(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_HOWTO,
             'name' => 'Instrukcja',
-            'step' => ['Krok 1','Krok 2'],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+            'step' => ['Krok 1', 'Krok 2'],
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'HowTo');
     }
 
-    public function testLocalBusiness(): void
+    public function test_local_business(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_LOCALBUSINESS,
             'name' => 'Dominwise',
             'address' => 'Address, City',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'LocalBusiness');
     }
 
-    public function testVideoObject(): void
+    public function test_video_object(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_VIDEOOBJECT,
@@ -119,125 +164,125 @@ final class ThemeHelperStructuredDataTest extends TestCase
             'thumbnailUrl' => ['https://example.com/t.jpg'],
             'uploadDate' => '2025-01-02',
             'duration' => 'PT1H2M3S',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'VideoObject');
     }
 
-    public function testRecipe(): void
+    public function test_recipe(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_RECIPE,
             'name' => 'Przepis',
             'recipeIngredient' => ['1kg mąki'],
             'recipeInstructions' => ['Wymieszaj', 'Upiecz'],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'Recipe');
     }
 
-    public function testSoftwareApplication(): void
+    public function test_software_application(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_SOFTWAREAPPLICATION,
             'name' => 'App',
             'operatingSystem' => 'Linux',
             'applicationCategory' => 'DeveloperApplication',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'SoftwareApplication');
     }
 
-    public function testJobPosting(): void
+    public function test_job_posting(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_JOBPOSTING,
             'title' => 'PHP Dev',
             'hiringOrganization' => 'Dominwise',
-            'jobLocation' => ['@type'=>'Place','address'=>'PL'],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+            'jobLocation' => ['@type' => 'Place', 'address' => 'PL'],
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'JobPosting');
     }
 
-    public function testItemList(): void
+    public function test_item_list(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_ITEMLIST,
             'items' => [
-                ['name'=>'A','url'=>'https://example.com/a'],
-                ['name'=>'B','url'=>'https://example.com/b'],
+                ['name' => 'A', 'url' => 'https://example.com/a'],
+                ['name' => 'B', 'url' => 'https://example.com/b'],
             ],
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'ItemList');
     }
 
-    public function testImageObject(): void
+    public function test_image_object(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_IMAGEOBJECT,
             'contentUrl' => 'https://example.com/i.jpg',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'ImageObject');
     }
 
-    public function testWebSite(): void
+    public function test_web_site(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_WEBSITE,
             'url' => 'https://example.com/',
             'name' => 'Example',
             'searchUrl' => 'https://example.com/search?q={query}',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'WebSite');
     }
 
-    public function testWebPage(): void
+    public function test_web_page(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_WEBPAGE,
             'url' => 'https://example.com/page',
             'name' => 'Page',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'WebPage');
     }
 
-    public function testOrganization(): void
+    public function test_organization(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_ORGANIZATION,
             'name' => 'Dominwise',
-        ], ['on_invalid'=>'error','use_spatie'=>false]);
+        ], ['on_invalid' => 'error', 'use_spatie' => false]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'Organization');
     }
 
-    public function testSchemasPassThrough(): void
+    public function test_schemas_pass_through(): void
     {
         $html = ThemeHelper::smartStructuredData([
             'schemas' => [
-                ['@type'=>'Organization','name'=>'Dominwise','url'=>'https://example.com'],
-                ['@type'=>'WebSite','url'=>'https://example.com','name'=>'Example'],
-            ]
-        ], ['on_invalid'=>'error']);
+                ['@type' => 'Organization', 'name' => 'Dominwise', 'url' => 'https://example.com'],
+                ['@type' => 'WebSite', 'url' => 'https://example.com', 'name' => 'Example'],
+            ],
+        ], ['on_invalid' => 'error']);
         $graph = $this->decodeGraph($html);
         $this->assertGreaterThanOrEqual(2, count($graph));
     }
 
-    public function testSpatieIfAvailable(): void
+    public function test_spatie_if_available(): void
     {
-        if (!class_exists(\Spatie\SchemaOrg\Schema::class)) {
+        if (! class_exists(Schema::class)) {
             $this->markTestSkipped('Spatie not installed');
         }
         $html = ThemeHelper::smartStructuredData([
             'type' => ThemeHelper::SCHEMA_PRODUCT,
             'name' => 'EcoChatka 70',
-            'offers' => [['price'=>'129900','priceCurrency'=>'PLN']],
-        ], ['on_invalid'=>'error','use_spatie'=>true]);
+            'offers' => [['price' => '129900', 'priceCurrency' => 'PLN']],
+        ], ['on_invalid' => 'error', 'use_spatie' => true]);
         $graph = $this->decodeGraph($html);
         $this->assertNodeType($graph[0], 'Product');
     }

@@ -52,9 +52,11 @@ It is designed to be the integration layer between your Laravel application and 
 
 ## Requirements
 
-- PHP 8.1+
-- Laravel 10.x / 11.x / 12.x / 13.x
-- `spatie/schema-org`
+- PHP 8.4+
+- Laravel 13.32+
+- `spatie/schema-org` 5.x
+
+The current `4.x` line targets DominPress and Laravel 13. Laravel 10–12 and PHP 8.1–8.3 remain available through the previous `3.x` line. PHP 8.4 is required by `spatie/schema-org` 5.
 - Optional: `mcamara/laravel-localization`
 
 ---
