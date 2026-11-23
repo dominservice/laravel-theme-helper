@@ -1,16 +1,21 @@
 {
   "name": "dominservice/laravel-theme-helper",
-  "description": "A small Laravel utility to manage everything you usually put into the <head> and the closing of <body>, plus a pragmatic Schema.org JSON‑LD generator.",
+  "description": "Manage Laravel themes, page metadata, hreflang, Schema.org JSON-LD, XML sitemaps and responsive image markup.",
   "type": "library",
-  "keywords": ["laravel", "theme", "seo", "meta", "json-ld"],
+  "keywords": ["laravel", "themes", "technical-seo", "hreflang", "json-ld", "sitemap"],
   "homepage": "https://github.com/dominservice/laravel-theme-helper",
   "license": "MIT",
   "authors": [
     {
-      "name": "DSO-IT Mateusz Domin",
-      "email": "biuro@dso.biz.pl"
+      "name": "Mateusz Domin",
+      "email": "biuro@dominsoftware.it",
+      "homepage": "https://dominsoftware.it/"
     }
   ],
+  "support": {
+    "source": "https://github.com/dominservice/laravel-theme-helper",
+    "issues": "https://github.com/dominservice/laravel-theme-helper/issues"
+  },
   "require": {
     "php": "^8.4",
     "ext-json": "*",

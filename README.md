@@ -1,11 +1,17 @@
-# Dominservice Laravel Theme Helper
+# Laravel Theme Helper
 
-[![Packagist](https://img.shields.io/packagist/v/dominservice/laravel-theme-helper.svg)]()
+<img src="docs/dominpress-logo.webp" alt="Laravel Theme Helper logo showing a browser window with interchangeable layout panels" width="128" height="128">
+
+Laravel Theme Helper manages frontend themes and generates page metadata, hreflang, Schema.org JSON-LD, sitemaps and responsive image markup for Laravel applications.
+
+Developed by Mateusz Domin at [Domin Software](https://dominsoftware.it/). It is the theme and metadata layer used by [DominPress](https://dominsoftware.it/dominpress).
+
+[![Packagist](https://img.shields.io/packagist/v/dominservice/laravel-theme-helper.svg)](https://packagist.org/packages/dominservice/laravel-theme-helper)
 [![Latest Version](https://img.shields.io/github/release/dominservice/laravel-theme-helper.svg?style=flat-square)](https://github.com/dominservice/laravel-theme-helper/releases)
 [![Total Downloads](https://img.shields.io/packagist/dt/dominservice/laravel-theme-helper.svg?style=flat-square)](https://packagist.org/packages/dominservice/laravel-theme-helper)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
-A Laravel package for:
+## Key Features
 
 - SEO and meta management,
 - asset registration and rendering,
@@ -46,6 +52,7 @@ It is designed to be the integration layer between your Laravel application and 
 - [Helpers](#helpers)
 - [Deployment notes](#deployment-notes)
 - [Testing](#testing)
+- [Support](#support)
 - [License](#license)
 
 ---
@@ -85,17 +92,17 @@ This publishes:
 
 ---
 
-## Quick start
+## Quick Start
 
 ```php
 use Dominservice\LaravelThemeHelper\Facades\Theme;
 
 Theme::meta()
-    ->setTitle('DSO-IT', config('app.name'))
-    ->setDescription('Software house and custom web systems')
+    ->setTitle('Laravel development', 'Domin Software')
+    ->setDescription('PHP and Laravel development for businesses.')
     ->setCanonical(url()->current())
-    ->setAuthor('Domin Software')
-    ->setGenerator('DomiPress')
+    ->setAuthor('Mateusz Domin')
+    ->setGenerator('DominPress')
     ->setHttpEquiv('X-UA-Compatible', 'IE=edge')
     ->setIcons([
         'favicon' => asset('favicon.ico'),
@@ -109,10 +116,16 @@ echo Theme::renderHead();
 echo Theme::renderBodyEnd();
 ```
 
-`RobotsTxtBuilder::addGroup()` wspiera także `extras`, więc można dodać dyrektywy specyficzne dla wybranych botów, np. `Max-image-preview: large`.
+The generated head includes these tags. The canonical URL comes from the current request.
 
-`setIcons()` wspiera także pełniejsze deklaracje favicon/PWA, m.in. `apple_touch`, `icon`, `manifest`, `mask_icon`, `mask_color`, `ms_tile_image`, `ms_tile_color` i `theme_color`.
-`MetaManager` wspiera też dodatkowe tagi head przez `setAuthor()`, `setGenerator()`, `addMeta()` i `setHttpEquiv()`.
+```html
+<meta name="description" content="PHP and Laravel development for businesses.">
+<meta name="author" content="Mateusz Domin">
+<meta name="generator" content="DominPress">
+```
+
+`setIcons()` also accepts `apple_touch`, `icon`, `manifest`, `mask_icon`, `mask_color`, `ms_tile_image`, `ms_tile_color` and `theme_color`.
+Use `addMeta()` and `setHttpEquiv()` to add other head tags.
 
 Switch public theme dynamically:
 
@@ -537,6 +550,14 @@ vendor/bin/phpunit
 
 ---
 
+## Support
+
+Report package issues on [GitHub](https://github.com/dominservice/laravel-theme-helper/issues).
+
+If this package helps you, you can buy me a coffee to support its maintenance.
+
+[![Buy me a coffee on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dominservice)
+
 ## License
 
-MIT
+[MIT](LICENSE)
